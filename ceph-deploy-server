@@ -1,0 +1,41 @@
+# generate ssh-keys
+ssh-keygen
+
+# Modify the ~/.ssh/config
+
+Host ceph-mon1
+   Hostname ceph-mon1
+   User cephuser
+Host ceph-mon2
+   Hostname ceph-mon2
+   User cephuser
+Host ceph-mon3
+   Hostname ceph-mon3
+   User cephuser
+Host ceph-osd1
+   Hostname ceph-osd1
+   User cephuser
+Host ceph-osd2
+   Hostname ceph-osd2
+   User cephuser
+Host ceph-osd3
+   Hostname ceph-osd3
+   User cephuser   
+   
+   
+   
+   
+#  Create a Ceph Deploy User.
+
+ssh-copy-id cephuser@ceph-mon1
+ssh-copy-id cephuser@ceph-mon2
+ssh-copy-id cephuser@ceph-mon3
+ssh-copy-id cephuser@ceph-osd1
+ssh-copy-id cephuser@ceph-osd2
+ssh-copy-id cephuser@ceph-osd3
+
+
+# change own&user permissions on ~/.ssh/config
+
+chmod 600 ~/.ssh/config
+chown $USER ~/.ssh/config

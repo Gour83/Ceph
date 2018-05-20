@@ -1,0 +1,117 @@
+#/bin/bash
+#change hostname start
+echo "Enter new hostname: "
+read newhost
+hostnamectl set-hostname $newhost
+#change hostname done
+
+#dns and firewall start
+echo nameserver 8.8.8.8 | tee /etc/resolv.conf
+echo nameserver 8.8.4.4 >> /etc/resolv.conf
+##
+
+systemctl stop firewalld
+systemctl disable firewalld
+systemctl status firewalld
+##dns and firewall done
+
+
+
+## Add repo to each node ##
+cat << EOM > /etc/yum.repos.d/ceph.repo
+[ceph-noarch]
+name=Ceph noarch packages
+baseurl=https://download.ceph.com/rpm-luminous/el7/noarch
+enabled=1
+gpgcheck=1
+type=rpm-md
+gpgkey=https://download.ceph.com/keys/release.asc
+EOM
+
+### done
+
+## install open ssh server ##
+yum install -y openssh-server
+ssh-keygen
+## done
+
+
+#Ceph user creation & Env
+useradd -d /home/cephuser -m cephuser
+passwd cephuser
+echo "cephuser ALL = (root) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/cephuser
+sed -i s'/Defaults requiretty/#Defaults requiretty'/g /etc/sudoers
+chmod 0440 /etc/sudoers.d/cephuser
+## done
+
+## open-vm-tools and NTP service ##
+yum install -y open-vm-tools
+yum install -y ntp ntpdate ntp-doc
+ntpdate 0.us.pool.ntp.org
+hwclock --systohc
+systemctl enable ntpd.service
+systemctl start ntpd.service
+## done
+
+## Sed enforcement
+sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
+### done
+
+#adding host entris
+
+echo "192.168.25.19  ceph-deploy01  cen-unixmgmt01" >> /etc/hosts
+echo "192.168.25.100 ceph-mon1" >> /etc/hosts
+echo "192.168.25.101 ceph-mon2" >> /etc/hosts
+echo "192.168.25.102 ceph-mon3" >> /etc/hosts
+echo "192.168.25.103 ceph-osd1" >> /etc/hosts
+echo "192.168.25.104 ceph-osd2" >> /etc/hosts
+echo "192.168.25.105 ceph-osd3" >> /etc/hosts
+## done
+
+
+#change system syscontrols start
+echo kernel.pid_max = 4194303 >> /etc/sysctl.conf
+echo net.ipv4.netfilter.ip_conntrack_max = 196608 >> /etc/sysctl.conf
+echo net.netfilter.nf_conntrack_max = 1048576 >> /etc/sysctl.conf
+echo net.core.rmem_max = 16777216 >> /etc/sysctl.conf
+echo net.core.wmem_max = 16777216 >> /etc/sysctl.conf
+echo net.core.wmem_default = 262144 >> /etc/sysctl.conf
+echo net.core.rmem_default = 262144 >> /etc/sysctl.conf
+echo net.ipv4.tcp_rmem = '8192 87380 16777216' >> /etc/sysctl.conf
+echo net.ipv4.tcp_wmem = '4096 65536 16777216' >> /etc/sysctl.conf
+echo net.core.netdev_max_backlog = 30000 >> /etc/sysctl.conf
+echo net.ipv4.tcp_congestion_control = htcp >> /etc/sysctl.conf
+echo net.ipv4.conf.all.rp_filter = 2 >> /etc/sysctl.conf
+#change system syscontrols end
+
+#network address setting
+mv  /etc/sysconfig/network-scripts/ifcfg-eno16777984  /etc/sysconfig/network-scripts/ifcfg-eno16777984.bak
+#change IP start
+echo "Enter new IP: "
+read newip
+
+cat << EOM > /etc/sysconfig/network-scripts/ifcfg-eno16777984
+TYPE=Ethernet
+BOOTPROTO=none
+DEFROUTE=yes
+IPV4_FAILURE_FATAL=yes
+IPV6INIT=yes
+IPV6_AUTOCONF=yes
+IPV6_DEFROUTE=yes
+IPV6_FAILURE_FATAL=no
+NAME=eno16777984
+UUID=0361a16e-0512-4c06-8d02-0dac9287db0d
+DEVICE=eno16777984
+ONBOOT=yes
+IPADDR=$newip
+PREFIX=24
+GATEWAY=192.168.25.1
+DNS1=8.8.8.8
+DNS2=8.8.4.4
+IPV6_PEERDNS=yes
+IPV6_PEERROUTES=yes
+IPV6_PRIVACY=no
+EOM
+##done
+
+
